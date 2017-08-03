@@ -1,0 +1,77 @@
+#!/usr/bin/env ruby
+
+require_relative './_common.rb'
+
+RUNS = 3
+
+commits = ARGV[0]&.split('..')
+cmd = ARGV[1]
+unless commits&.count == 2 && cmd&.length&.>(0)
+  STDERR.puts "usage: git-benchmark <commit1>..<commit2> <cmd>"
+  abort
+end
+commit1 = commits[0]
+commit2 = commits[1]
+list = `git log --pretty=format:"%H" #{commit1}^..#{commit2}`.strip.split("\n").reverse
+
+current_branch = `git current-branch`
+at_exit do
+  `git checkout #{current_branch} 2>/dev/null`
+end
+
+class Table
+  def initialize(titles)
+    @titles = titles
+    @format = titles.values.map do |value|
+      "%-#{value}s"
+    end.join(' | ') + "\n"
+  end
+
+  def print_header
+    first = true
+    @titles.each do |k, v|
+      print(' | ') unless first
+      first = false
+      printf("%-#{v}s", k)
+    end
+    puts
+    first = true
+    @titles.each do |k, v|
+      print '-+-' unless first
+      print '-'*v
+      first = false
+    end
+    puts
+  end
+
+  def print_row(*values)
+    printf(@format, *values)
+  end
+end
+
+hash = {
+  'Revision' => 12,
+  'Date' => 20,
+  'Title' => 100,
+  'Time' => 30
+}
+table = Table.new(hash)
+table.print_header
+
+list.each do |revision|
+  `git checkout #{revision} 2>/dev/null`
+  rev = revision[0...12]
+  date = `git log -1 --pretty=format:"%cr" #{revision}`
+  topic = `git log -1 --pretty=format:"%s" #{revision}`
+  time = 2.5
+  total = 0
+  RUNS.times do
+    start = Time.now
+    `#{cmd} >/dev/null 2>/dev/null`
+    diff = Time.now - start
+    # puts "#{revision} #{cmd} - #{diff}"
+    total += diff
+  end
+  time = sprintf("%6.2fs", total.to_f / RUNS.to_f)
+  table.print_row(rev, date, topic, time)
+end
