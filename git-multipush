@@ -1,0 +1,18 @@
+#!/usr/bin/env ruby
+
+remote = ARGV[0] || 'origin'
+branch = ARGV[1]
+remote = 'origin' if remote == '--force'
+branch = nil if branch == '--force'
+branch ||= `git current-branch`
+force = (ARGV.last == '--force') ? '--force' : ''
+
+puts "Pushing every commit in branch <#{branch}> to remote <#{remote}>."
+
+list = `git log #{remote}/#{branch}..HEAD --pretty=format:"%H"`.split("\n").reverse
+
+list.each do |commit|
+  cmd = "git push #{force} #{remote} #{commit}:#{branch}"
+  puts cmd
+  system cmd
+end

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+git add . >/dev/null 2>/dev/null
+(date; echo '|'; curl -s http://whatthecommit.com/index.txt) | sed ':a;N;$!ba;s/\n/ /g' | git commit --file - >/dev/null 2>/dev/null
+git push >/dev/null 2>/dev/null
